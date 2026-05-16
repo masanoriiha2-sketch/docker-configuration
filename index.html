@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guia Definitivo: Docker via Hyper-V</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: #FAFAF9; color: #292524; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 300px; max-height: 400px; }
+        .hide { display: none; }
+        .nav-btn { transition: all 0.2s; border-bottom: 2px solid transparent; }
+        .nav-btn.active { border-bottom: 2px solid #0369A1; color: #0369A1; font-weight: 600; }
+        .tab-btn { transition: background-color 0.2s; }
+        .tab-btn.active { background-color: #E0F2FE; color: #075985; border-left: 4px solid #0284C7; }
+        .copy-btn:active { transform: scale(0.95); }
+        .block-diagram { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+        @media (min-width: 768px) { .block-diagram { flex-direction: row; justify-content: center; } }
+        .diagram-box { background: white; border: 1px solid #E7E5E4; padding: 1rem; border-radius: 0.5rem; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05); width: 100%; max-width: 200px; }
+        .diagram-arrow { color: #A8A29E; font-size: 1.5rem; transform: rotate(90deg); }
+        @media (min-width: 768px) { .diagram-arrow { transform: rotate(0deg); } }
+        
+        /* Estilos para os Mocks de Terminal/UI */
+        .mock-terminal { background-color: #0c0c0c; color: #cccccc; font-family: 'Consolas', 'Courier New', monospace; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; font-size: 0.875rem; border: 1px solid #2d2d2d; }
+        .mock-ubuntu { background-color: #300A24; color: #ffffff; font-family: 'Ubuntu Mono', 'Consolas', monospace; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; font-size: 0.875rem; border: 1px solid #5E2750; }
+        .mock-vscode { background-color: #1e1e1e; border: 1px solid #333; border-radius: 0.5rem; overflow: hidden; font-family: 'Segoe UI', sans-serif;}
+        .mock-hyperv-error { background-color: #ffffff; border: 1px solid #0078D7; border-radius: 0.25rem; box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-family: 'Segoe UI', sans-serif;}
+    </style>
+    <!-- Chosen Palette: Clean Professional (stone-50, stone-800, sky-700) -->
+    <!-- Application Structure Plan: Estrutura em painel (Dashboard) com três seções principais: 1. Contexto & Arquitetura (explica o PORQUÊ da solução e recria os erros originais), 2. Guia de Instalação Detalhado (passo a passo com mocks visuais simulando as imagens fornecidas), 3. Comandos Diários (ferramenta de consulta rápida). A estrutura visa servir como uma documentação "vivo" e autossuficiente para o usuário hospedar. -->
+    <!-- Visualization & Content Choices: 1. Diagrama de Arquitetura -> HTML/CSS Flexbox. 2. Gráfico de Memória -> Chart.js Bar Chart (ilustra a solução para o erro 0x8007000E). 3. Mocks Visuais -> HTML/CSS (Recria as imagens originais do usuário: erro WSL no PS, erro Hyper-V, ip addr no Ubuntu, e VS Code SSH, garantindo que o doc seja self-contained sem dependência de imagens externas). 4. Comandos -> Grid com filtro. NO SVG/Mermaid. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <header class="bg-white border-b border-stone-200 sticky top-0 z-10 shadow-sm">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-center py-4">
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">📘</span>
+                    <div>
+                        <h1 class="text-xl font-bold text-stone-800 tracking-tight">Guia de Sobrevivência: Docker Nativo</h1>
+                        <p class="text-xs text-stone-500">Bypass de WSL corrompido via Hyper-V</p>
+                    </div>
+                </div>
+                <nav class="flex gap-4 mt-4 md:mt-0 overflow-x-auto w-full md:w-auto">
+                    <button class="nav-btn active pb-1 px-2 whitespace-nowrap" data-target="view-overview">Contexto & Solução</button>
+                    <button class="nav-btn pb-1 px-2 whitespace-nowrap" data-target="view-setup">Passo a Passo</button>
+                    <button class="nav-btn pb-1 px-2 whitespace-nowrap" data-target="view-commands">Consultar Comandos</button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+
+        <!-- VISÃO GERAL -->
+        <section id="view-overview" class="view-section">
+            <div class="mb-8 bg-white p-8 rounded-lg shadow-sm border border-stone-100">
+                <h2 class="text-2xl font-bold mb-4 text-stone-800">Por que esta arquitetura é necessária?</h2>
+                <p class="text-stone-600 mb-8 leading-relaxed">
+                    Este documento detalha o procedimento de "resgate" e configuração de um ambiente de desenvolvimento isolado. Ele é necessário quando o host Windows apresenta corrupção severa no banco de dados de componentes (erro 1603, DISM travado) ou perda de referências de caminho do WSL, inviabilizando a instalação do Docker Desktop tradicional.
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                    <div class="bg-red-50 p-5 rounded-lg border border-red-100">
+                        <h3 class="text-lg font-semibold text-red-800 mb-3 flex items-center gap-2"><span>⚠️</span> Sintoma 1: Falha do WSL</h3>
+                        <p class="text-sm text-red-700 mb-4">O Windows perde o link simbólico do executável do WSL, retornando "caminho não encontrado" mesmo após tentativas manuais de instalação via pacotes <code>.msixbundle</code>.</p>
+                        <!-- MOCK DO POWERSHELL -->
+                        <div class="mock-terminal">
+                            <div><span class="text-green-400">PS C:\WINDOWS\system32></span> wsl --install --manual</div>
+                            <div class="text-red-400">O sistema não pode encontrar o caminho especificado.</div>
+                            <div><span class="text-green-400">PS C:\Users\Usuario\Downloads></span> Add-AppxPackage -Path ".\Microsoft.WSL...msixbundle"</div>
+                            <div class="text-yellow-400">>></div>
+                            <div class="text-yellow-400">>> cd..</div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-stone-50 p-5 rounded-lg border border-stone-200">
+                        <h3 class="text-lg font-semibold text-stone-800 mb-3 flex items-center gap-2"><span>✅</span> A Solução: Isolamento via Hyper-V</h3>
+                        <p class="text-sm text-stone-600 mb-4">Em vez de depender da Microsoft Store ou do WSL (que interagem profundamente com o registro do Windows), isolamos o ambiente subindo o motor Docker nativamente em uma Máquina Virtual Linux gerida pelo Hyper-V, acessando-a via SSH.</p>
+                        <div class="block-diagram mt-6 text-sm">
+                            <div class="diagram-box p-2">🪟 Windows<br><span class="text-xs text-stone-500">VS Code</span></div>
+                            <div class="diagram-arrow">➔</div>
+                            <div class="diagram-box p-2 bg-sky-50 border-sky-200 border-2">🔑 SSH<br><span class="text-xs text-stone-500">Ponte de Rede</span></div>
+                            <div class="diagram-arrow">➔</div>
+                            <div class="diagram-box p-2">🐧 Ubuntu VM<br><span class="text-xs text-stone-500">Motor Docker</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- GUIA DE INSTALAÇÃO -->
+        <section id="view-setup" class="view-section hide">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold mb-3 text-stone-800">Implementação da Infraestrutura</h2>
+                <p class="text-stone-600 mb-6">Siga as abas sequencialmente para recriar o ambiente. Cada passo foi detalhado para ser imune a falhas locais do Windows.</p>
+                
+                <div class="flex flex-col md:flex-row gap-6 bg-white rounded-lg shadow-sm border border-stone-200 overflow-hidden min-h-[500px]">
+                    <div class="md:w-1/3 bg-stone-50 flex flex-col p-3 border-r border-stone-200" id="tabs-container">
+                        <!-- Tabs renderizadas via JS -->
+                    </div>
+                    <div class="md:w-2/3 p-6 overflow-y-auto" id="tab-content">
+                        <!-- Conteúdo renderizado via JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- COMANDOS -->
+        <section id="view-commands" class="view-section hide">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold mb-3 text-stone-800">Painel de Comandos Diários</h2>
+                <p class="text-stone-600 mb-6">Sua biblioteca rápida. Como o Docker está rodando no Linux, estes comandos devem ser executados no terminal remoto (via VS Code) ou diretamente no terminal da VM.</p>
+                
+                <div class="relative mb-8 shadow-sm">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-stone-400">🔍</span>
+                    <input type="text" id="searchInput" placeholder="Buscar comando (ex: logs, rm, build)..." class="w-full pl-12 pr-4 py-4 rounded-lg border border-stone-300 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-lg">
+                </div>
+
+                <div id="commands-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <!-- Grid renderizada via JS -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        const appData = {
+            currentView: 'view-setup', // Inicia no setup por padrão para facilitar a vida do usuário
+            currentTab: 'infra',
+            steps: [
+                {
+                    id: 'infra',
+                    title: '1. Hyper-V & Memória',
+                    icon: '💻',
+                    content: `
+                        <h3 class="text-xl font-bold mb-4 text-stone-800">Criação da VM e Contorno de Erro</h3>
+                        <p class="mb-4 text-stone-600 leading-relaxed">Abra o <strong>Gerenciador do Hyper-V</strong> e utilize a opção "Criação Rápida" para baixar e instalar o <strong>Ubuntu 22.04 LTS</strong> (ou superior).</p>
+                        
+                        <div class="bg-amber-50 p-4 rounded-lg border border-amber-200 mb-6">
+                            <h4 class="font-semibold text-amber-800 mb-2 flex items-center gap-2"><span>⚠️</span> Prevenção do Erro 0x8007000E</h4>
+                            <p class="text-sm text-amber-700 mb-4">Se o seu Windows estiver com gerenciamento de memória instável, tentar ligar a VM com as configurações padrão (6GB) causará uma falha de alocação, exibindo um erro semelhante a este:</p>
+                            
+                            <!-- MOCK DO ERRO HYPER-V -->
+                            <div class="mock-hyperv-error p-1 mb-4 text-xs">
+                                <div class="bg-white p-3">
+                                    <div class="flex items-start gap-3">
+                                        <div class="text-white bg-red-600 rounded-full w-6 h-6 flex items-center justify-center font-bold text-sm shrink-0">X</div>
+                                        <div>
+                                            <p class="text-sky-700 font-medium mb-3 text-sm">O Aplicativo encontrou um erro durante a tentativa de alterar o estado de 'Ubuntu 22.04 LTS'.</p>
+                                            <p class="text-stone-800 mb-2">'Ubuntu 22.04 LTS' failed to start.</p>
+                                            <p class="text-stone-800 mb-2">Not enough memory in the system to start the virtual machine Ubuntu 22.04 LTS with ram size 6000 megabytes.</p>
+                                            <p class="text-stone-800">Could not initialize memory: Recursos de memória insuficientes disponíveis para concluir a operação. (0x8007000E).</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-stone-100 p-2 flex justify-end border-t border-stone-200">
+                                    <span class="px-4 py-1 bg-white border border-stone-300 rounded text-stone-800">Fechar</span>
+                                </div>
+                            </div>
+
+                            <p class="text-sm font-bold text-amber-900">A Solução:</p>
+                            <ol class="list-decimal pl-5 space-y-1 text-sm text-amber-800 mt-2">
+                                <li>Clique com botão direito na VM > <strong>Configurações</strong> > <strong>Memória</strong>.</li>
+                                <li>Altere a "Memória RAM Inicial" para <strong>2048 MB</strong>.</li>
+                                <li>Marque <strong>"Habilitar Memória Dinâmica"</strong> (Mínima: 512 MB, Máxima: 4096 MB).</li>
+                            </ol>
+                        </div>
+                    `
+                },
+                {
+                    id: 'docker',
+                    title: '2. Instalação Docker',
+                    icon: '🐳',
+                    content: `
+                        <h3 class="text-xl font-bold mb-4 text-stone-800">Instalação Nativa no Ubuntu</h3>
+                        <p class="mb-4 text-stone-600">Ligue a Máquina Virtual, conclua a configuração do usuário e abra o terminal (<code>Ctrl + Alt + T</code>). Execute os passos abaixo para instalar o motor Docker diretamente no Linux.</p>
+                        
+                        <div class="mb-6">
+                            <p class="text-sm font-bold text-stone-700 mb-2">1. Atualizar pacotes e instalar o Docker:</p>
+                            <div class="bg-stone-900 p-1 rounded-lg">
+                                <div class="flex justify-between items-center px-3 py-1 bg-stone-800 rounded-t border-b border-stone-700">
+                                    <span class="text-xs text-stone-400">bash</span>
+                                    <button class="text-xs text-stone-300 hover:text-white" onclick="copyText('sudo apt update && sudo apt install docker.io -y', this)">Copiar</button>
+                                </div>
+                                <div class="p-3">
+                                    <code class="text-sm font-mono text-green-400">sudo apt update && sudo apt install docker.io -y</code>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <p class="text-sm font-bold text-stone-700 mb-2">2. Configurar permissões de usuário:</p>
+                            <p class="text-xs text-stone-500 mb-2">Isso evita a necessidade de digitar 'sudo' antes de cada comando do docker.</p>
+                            <div class="bg-stone-900 p-1 rounded-lg">
+                                <div class="flex justify-between items-center px-3 py-1 bg-stone-800 rounded-t border-b border-stone-700">
+                                    <span class="text-xs text-stone-400">bash</span>
+                                    <button class="text-xs text-stone-300 hover:text-white" onclick="copyText('sudo usermod -aG docker $USER', this)">Copiar</button>
+                                </div>
+                                <div class="p-3">
+                                    <code class="text-sm font-mono text-green-400">sudo usermod -aG docker $USER</code>
+                                </div>
+                            </div>
+                            <div class="mt-2 text-sm text-sky-700 font-medium flex items-center gap-2">
+                                <span>🔄</span> Reinicie a VM após este passo para aplicar o grupo de permissão.
+                            </div>
+                        </div>
+                    `
+                },
+                {
+                    id: 'ssh',
+                    title: '3. Acesso SSH & Rede',
+                    icon: '📡',
+                    content: `
+                        <h3 class="text-xl font-bold mb-4 text-stone-800">Preparando a Conexão Remota</h3>
+                        <p class="mb-4 text-stone-600">Para trabalhar de forma transparente a partir do Windows, precisamos ativar o servidor SSH na VM e descobrir qual IP ela recebeu do Hyper-V.</p>
+                        
+                        <div class="mb-6">
+                            <p class="text-sm font-bold text-stone-700 mb-2">1. Instalar o OpenSSH Server:</p>
+                            <div class="bg-stone-900 text-stone-100 p-3 rounded-lg mb-2 cursor-pointer hover:bg-stone-800 transition" onclick="copyText('sudo apt install openssh-server -y')">
+                                <code class="text-sm font-mono">sudo apt install openssh-server -y</code>
+                            </div>
+                            <div class="bg-stone-900 text-stone-100 p-3 rounded-lg cursor-pointer hover:bg-stone-800 transition" onclick="copyText('sudo systemctl enable ssh --now')">
+                                <code class="text-sm font-mono text-stone-400"># Garante que inicie com o sistema</code><br>
+                                <code class="text-sm font-mono">sudo systemctl enable ssh --now</code>
+                            </div>
+                        </div>
+
+                        <div>
+                            <p class="text-sm font-bold text-stone-700 mb-2">2. Descobrir o IP da Máquina Virtual:</p>
+                            <p class="text-xs text-stone-500 mb-2">Execute o comando <code>ip addr</code> e procure pela interface de rede principal (geralmente <strong>eth0</strong>).</p>
+                            
+                            <!-- MOCK DO TERMINAL UBUNTU (ip addr) -->
+                            <div class="mock-ubuntu mb-2">
+                                <div><span class="text-green-400">usuario_linux@nomedavm:~$</span> ip addr</div>
+                                <div class="text-stone-400">1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu 65536...</div>
+                                <div class="text-white mt-1">2: <span class="font-bold">eth0</span>: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500...</div>
+                                <div class="text-stone-300 ml-4">link/ether 00:15:5d:xx:xx:xx brd ff:ff:ff:ff:ff:ff</div>
+                                <div class="text-white ml-4 font-bold bg-white/10 inline-block px-1">inet 192.168.x.x/20 brd 192.168.x.255 scope global...</div>
+                                <div class="text-stone-300 ml-4">valid_lft 86294sec preferred_lft 86294sec</div>
+                                <div class="text-stone-400 mt-1">3: docker0: &lt;NO-CARRIER,BROADCAST,MULTICAST,UP&gt;...</div>
+                                <div><span class="text-green-400 mt-2 block">usuario_linux@nomedavm:~$</span> <span class="animate-pulse">_</span></div>
+                            </div>
+                            
+                            <p class="text-sm text-stone-600 bg-stone-100 p-3 rounded border border-stone-200">
+                                Anote o endereço após <strong>inet</strong> (Exemplo: <code>192.168.1.50</code>). Você usará este IP no Windows para conectar o VS Code e acessar suas APIs no navegador (ex: <code>http://192.168.1.50:5000</code>).
+                            </p>
+                        </div>
+                    `
+                },
+                {
+                    id: 'vscode',
+                    title: '4. Configurar VS Code',
+                    icon: '⚙️',
+                    content: `
+                        <h3 class="text-xl font-bold mb-4 text-stone-800">Unindo os Mundos (Windows + Linux)</h3>
+                        <p class="mb-4 text-stone-600">Agora voltamos ao Windows. Todo o seu código será escrito aqui, mas executado magicamente dentro do Linux.</p>
+                        
+                        <ol class="list-decimal pl-5 space-y-4 text-stone-700 mb-6">
+                            <li>Abra o <strong>Visual Studio Code</strong> no Windows.</li>
+                            <li>Instale a extensão oficial da Microsoft chamada <strong>"Remote - SSH"</strong>.</li>
+                            <li>Aperte <kbd class="px-2 py-1 bg-stone-100 border border-stone-300 rounded text-xs font-mono">F1</kbd> ou <kbd class="px-2 py-1 bg-stone-100 border border-stone-300 rounded text-xs font-mono">Ctrl+Shift+P</kbd> e digite: <code>Remote-SSH: Connect to Host...</code></li>
+                            <li>Selecione <strong>"Add New SSH Host"</strong> e digite o comando no formato: <code>ssh &lt;seu_usuario_linux&gt;@&lt;ip_da_vm&gt;</code></li>
+                        </ol>
+
+                        <p class="text-sm font-bold text-stone-700 mb-2">Salvando a Configuração (Opcional, mas recomendado):</p>
+                        <p class="text-xs text-stone-500 mb-2">O VS Code perguntará onde salvar este atalho. Escolha o arquivo de configuração do seu usuário Windows.</p>
+                        
+                        <!-- MOCK DO VS CODE -->
+                        <div class="mock-vscode text-sm mb-6">
+                            <div class="bg-[#252526] text-[#cccccc] p-3 border-b border-[#333]">
+                                Select SSH configuration file to update
+                            </div>
+                            <div class="bg-[#37373d] text-white p-2 px-4 cursor-pointer">
+                                C:\Users\&lt;SeuUsuarioWindows&gt;\.ssh\config
+                            </div>
+                            <div class="bg-[#1e1e1e] text-[#cccccc] p-2 px-4">
+                                C:\ProgramData\ssh\ssh_config
+                            </div>
+                        </div>
+
+                        <div class="bg-sky-50 border-l-4 border-sky-500 p-4 rounded-r">
+                            <h4 class="font-bold text-sky-800">Pronto para codar!</h4>
+                            <p class="text-sm text-sky-700 mt-1">Ao conectar, o VS Code pedirá a senha do Linux. O terminal integrado do VS Code agora será o bash do Ubuntu. Você pode abrir pastas da VM e rodar arquivos <code>docker-compose.yml</code> normalmente.</p>
+                        </div>
+                    `
+                }
+            ],
+            commands: [
+                { cmd: 'docker run hello-world', desc: 'Testar se a instalação do motor foi bem-sucedida' },
+                { cmd: 'docker run -d -p 8080:80 --name meu-servidor nginx', desc: 'Rodar container em background (Ex: Servidor Web Nginx)' },
+                { cmd: 'docker ps', desc: 'Listar todos os containers ativos no momento' },
+                { cmd: 'docker ps -a', desc: 'Listar TODOS os containers (incluindo os parados)' },
+                { cmd: 'docker stop <nome_ou_id>', desc: 'Desligar um container que está rodando' },
+                { cmd: 'docker rm <nome_ou_id>', desc: 'Deletar a "carcaça" de um container parado' },
+                { cmd: 'docker rm -f <nome_ou_id>', desc: 'Forçar o desligamento e a deleção de uma só vez' },
+                { cmd: 'docker logs <nome_ou_id>', desc: 'Ver o output (console) de um container rodando' },
+                { cmd: 'docker images', desc: 'Listar as imagens base baixadas no seu disco' },
+                { cmd: 'docker rmi <nome_da_imagem>', desc: 'Apagar uma imagem base para liberar espaço' },
+                { cmd: 'docker-compose up -d', desc: 'Subir ambiente completo via arquivo compose' },
+                { cmd: 'docker-compose down', desc: 'Derrubar ambiente completo do compose' }
+            ]
+        };
+
+        function initNav() {
+            const navBtns = document.querySelectorAll('.nav-btn');
+            const sections = document.querySelectorAll('.view-section');
+
+            navBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const targetId = e.target.getAttribute('data-target');
+                    appData.currentView = targetId;
+                    
+                    navBtns.forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+
+                    sections.forEach(sec => {
+                        if(sec.id === targetId) {
+                            sec.classList.remove('hide');
+                        } else {
+                            sec.classList.add('hide');
+                        }
+                    });
+                });
+            });
+        }
+
+        function renderTabs() {
+            const container = document.getElementById('tabs-container');
+            container.innerHTML = '';
+            
+            appData.steps.forEach(step => {
+                const btn = document.createElement('button');
+                btn.className = `tab-btn w-full text-left p-4 rounded-lg mb-2 flex items-center gap-3 hover:bg-stone-200 transition-colors ${appData.currentTab === step.id ? 'active' : 'text-stone-600 border-l-4 border-transparent'}`;
+                btn.innerHTML = `<span class="text-2xl">${step.icon}</span> <span class="font-medium">${step.title}</span>`;
+                btn.onclick = () => {
+                    appData.currentTab = step.id;
+                    renderTabs();
+                    renderTabContent();
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function renderTabContent() {
+            const contentDiv = document.getElementById('tab-content');
+            const stepData = appData.steps.find(s => s.id === appData.currentTab);
+            if(stepData) {
+                // Fade effect
+                contentDiv.style.opacity = '0';
+                setTimeout(() => {
+                    contentDiv.innerHTML = stepData.content;
+                    contentDiv.style.transition = 'opacity 0.3s ease';
+                    contentDiv.style.opacity = '1';
+                }, 100);
+            }
+        }
+
+        function renderCommands(filterText = '') {
+            const grid = document.getElementById('commands-grid');
+            grid.innerHTML = '';
+            
+            const lowerFilter = filterText.toLowerCase();
+            const filtered = appData.commands.filter(c => 
+                c.cmd.toLowerCase().includes(lowerFilter) || 
+                c.desc.toLowerCase().includes(lowerFilter)
+            );
+
+            if(filtered.length === 0) {
+                grid.innerHTML = '<div class="col-span-full py-10 text-center text-stone-500"><span class="text-3xl block mb-2">🕵️</span> Nenhum comando encontrado para sua busca.</div>';
+                return;
+            }
+
+            filtered.forEach(cmdData => {
+                const card = document.createElement('div');
+                card.className = 'bg-white border border-stone-200 rounded-xl p-5 shadow-sm flex flex-col justify-between hover:shadow-md hover:border-sky-200 transition-all group';
+                card.innerHTML = `
+                    <div class="mb-4">
+                        <p class="text-sm font-semibold text-stone-800 mb-3 leading-snug">${cmdData.desc}</p>
+                        <div class="bg-[#1e1e1e] rounded-lg p-3 overflow-x-auto border border-stone-800">
+                            <code class="text-sm font-mono text-green-400 whitespace-nowrap">${cmdData.cmd.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code>
+                        </div>
+                    </div>
+                    <button class="copy-btn w-full py-2.5 bg-stone-100 text-stone-700 group-hover:bg-sky-50 group-hover:text-sky-700 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 transition-colors border border-stone-200 group-hover:border-sky-200" onclick="copyText('${cmdData.cmd.replace(/'/g, "\\'")}', this)">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg> 
+                        Copiar Comando
+                    </button>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function copyText(text, btnElement = null) {
+            navigator.clipboard.writeText(text).then(() => {
+                if(btnElement) {
+                    const originalHTML = btnElement.innerHTML;
+                    btnElement.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Copiado!';
+                    btnElement.classList.add('bg-green-100', 'text-green-800', 'border-green-200');
+                    btnElement.classList.remove('bg-stone-100', 'text-stone-700', 'group-hover:bg-sky-50', 'group-hover:text-sky-700');
+                    setTimeout(() => {
+                        btnElement.innerHTML = originalHTML;
+                        btnElement.classList.remove('bg-green-100', 'text-green-800', 'border-green-200');
+                        btnElement.classList.add('bg-stone-100', 'text-stone-700', 'group-hover:bg-sky-50', 'group-hover:text-sky-700');
+                    }, 2000);
+                }
+            });
+        }
+
+        function initSearch() {
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', (e) => {
+                renderCommands(e.target.value);
+            });
+        }
+
+        // Removido o gráfico de barras, mantendo a arquitetura puramente visual/HTML baseada nas instruções
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            initNav();
+            renderTabs();
+            renderTabContent();
+            renderCommands();
+            initSearch();
+            
+            // Força a exibição da aba correta no load
+            document.querySelector('[data-target="view-setup"]').click();
+        });
+    </script>
+</body>
+</html>
