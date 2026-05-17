@@ -1,325 +1,507 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-PT">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guia Definitivo: Docker via Hyper-V</title>
+    <title>Central de Engenharia Docker & Hyper-V</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: #FAFAF9; color: #292524; }
-        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 300px; max-height: 400px; }
-        .hide { display: none; }
-        .nav-btn { transition: all 0.2s; border-bottom: 2px solid transparent; }
-        .nav-btn.active { border-bottom: 2px solid #0369A1; color: #0369A1; font-weight: 600; }
-        .tab-btn { transition: background-color 0.2s; }
-        .tab-btn.active { background-color: #E0F2FE; color: #075985; border-left: 4px solid #0284C7; }
-        .copy-btn:active { transform: scale(0.95); }
-        .block-diagram { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
-        @media (min-width: 768px) { .block-diagram { flex-direction: row; justify-content: center; } }
-        .diagram-box { background: white; border: 1px solid #E7E5E4; padding: 1rem; border-radius: 0.5rem; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05); width: 100%; max-width: 200px; }
-        .diagram-arrow { color: #A8A29E; font-size: 1.5rem; transform: rotate(90deg); }
-        @media (min-width: 768px) { .diagram-arrow { transform: rotate(0deg); } }
-        
-        /* Estilos para os Mocks de Terminal/UI */
-        .mock-terminal { background-color: #0c0c0c; color: #cccccc; font-family: 'Consolas', 'Courier New', monospace; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; font-size: 0.875rem; border: 1px solid #2d2d2d; }
-        .mock-ubuntu { background-color: #300A24; color: #ffffff; font-family: 'Ubuntu Mono', 'Consolas', monospace; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; font-size: 0.875rem; border: 1px solid #5E2750; }
-        .mock-vscode { background-color: #1e1e1e; border: 1px solid #333; border-radius: 0.5rem; overflow: hidden; font-family: 'Segoe UI', sans-serif;}
-        .mock-hyperv-error { background-color: #ffffff; border: 1px solid #0078D7; border-radius: 0.25rem; box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-family: 'Segoe UI', sans-serif;}
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 320px;
+            max-height: 400px;
+        }
+        .hide {
+            display: none;
+        }
+        .nav-link {
+            transition: all 0.2s ease-in-out;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-link.active {
+            border-bottom: 2px solid #0284c7;
+            color: #0284c7;
+            font-weight: 600;
+        }
+        .terminal-window {
+            background-color: #0f172a;
+            color: #38bdf8;
+            font-family: 'Consolas', 'Courier New', monospace;
+            border: 1px solid #334155;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .vs-code-panel {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            border: 1px solid #2d2d2d;
+        }
+        .n8n-ban-symbol {
+            width: 48px;
+            height: 48px;
+            border: 5px solid #ef4444;
+            border-radius: 50%;
+            position: relative;
+            display: inline-block;
+        }
+        .n8n-ban-symbol::before {
+            content: "";
+            position: absolute;
+            width: 5px;
+            height: 38px;
+            background-color: #ef4444;
+            transform: rotate(45deg);
+            top: 0px;
+            left: 16px;
+        }
     </style>
-    <!-- Chosen Palette: Clean Professional (stone-50, stone-800, sky-700) -->
-    <!-- Application Structure Plan: Estrutura em painel (Dashboard) com três seções principais: 1. Contexto & Arquitetura (explica o PORQUÊ da solução e recria os erros originais), 2. Guia de Instalação Detalhado (passo a passo com mocks visuais simulando as imagens fornecidas), 3. Comandos Diários (ferramenta de consulta rápida). A estrutura visa servir como uma documentação "vivo" e autossuficiente para o usuário hospedar. -->
-    <!-- Visualization & Content Choices: 1. Diagrama de Arquitetura -> HTML/CSS Flexbox. 2. Gráfico de Memória -> Chart.js Bar Chart (ilustra a solução para o erro 0x8007000E). 3. Mocks Visuais -> HTML/CSS (Recria as imagens originais do usuário: erro WSL no PS, erro Hyper-V, ip addr no Ubuntu, e VS Code SSH, garantindo que o doc seja self-contained sem dependência de imagens externas). 4. Comandos -> Grid com filtro. NO SVG/Mermaid. -->
+    <!-- Chosen Palette: Slate & Sky Tech (Light Mode) -->
+    <!-- Application Structure Plan: Este painel interativo foi planeado para centralizar toda a experiência prática do utilizador com o Docker via Hyper-V. O fluxo inicia-se no 'Painel Geral' com a comparação de infraestrutura, avança para um 'Gerador de Comandos Dinâmico' que resolve os erros de persistência e cookie seguro em tempo real, apresenta um 'Simulador da Extensão VS Code' que desmistifica a duplicação de imagens vista nos capturas de ecrã, e conclui com uma 'Biblioteca de Comandos Filtrável'. Esta estrutura substitui documentos estáticos por ferramentas de aprendizagem e consulta imediata. -->
+    <!-- Visualization & Content Choices: 1. Gráfico Comparativo -> Chart.js Bar Chart -> Demonstra visualmente a eficiência de Containers vs VMs. 2. Gerador Dinâmico -> HTML Inputs + JS -> Constrói comandos docker run personalizados com mapeamento de caminhos reais. 3. Simulador de Erro de Cookie -> Mockup Interativo -> Recria de forma idêntica o erro das capturas de ecrã, mostrando a solução prática. 4. Simulador do Painel VS Code -> Interface interativa que replica a árvore de imagens do VS Code (image_1c253b.png). 5. Biblioteca -> Filtro em tempo real para comandos. -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <header class="bg-white border-b border-stone-200 sticky top-0 z-10 shadow-sm">
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex flex-col md:flex-row justify-between items-center py-4">
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-center py-4 gap-4">
                 <div class="flex items-center gap-3">
-                    <span class="text-3xl">📘</span>
+                    <span class="text-3xl">🐳</span>
                     <div>
-                        <h1 class="text-xl font-bold text-stone-800 tracking-tight">Guia de Sobrevivência: Docker Nativo</h1>
-                        <p class="text-xs text-stone-500">Bypass de WSL corrompido via Hyper-V</p>
+                        <h1 class="text-xl font-bold text-slate-800 tracking-tight">Manual Interativo Docker & Hyper-V</h1>
+                        <p class="text-xs text-slate-500">Central de Operação de Engenharia e Documentação Viva</p>
                     </div>
                 </div>
-                <nav class="flex gap-4 mt-4 md:mt-0 overflow-x-auto w-full md:w-auto">
-                    <button class="nav-btn active pb-1 px-2 whitespace-nowrap" data-target="view-overview">Contexto & Solução</button>
-                    <button class="nav-btn pb-1 px-2 whitespace-nowrap" data-target="view-setup">Passo a Passo</button>
-                    <button class="nav-btn pb-1 px-2 whitespace-nowrap" data-target="view-commands">Consultar Comandos</button>
+                <nav class="flex gap-4 md:gap-6 overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
+                    <button class="nav-link active pb-1 px-1 whitespace-nowrap text-slate-600 hover:text-sky-600" data-target="panel-architecture">Painel Geral</button>
+                    <button class="nav-link pb-1 px-1 whitespace-nowrap text-slate-600 hover:text-sky-600" data-target="panel-interactive-builder">Gerador & Persistência</button>
+                    <button class="nav-link pb-1 px-1 whitespace-nowrap text-slate-600 hover:text-sky-600" data-target="panel-images-explained">Imagens vs Containers</button>
+                    <button class="nav-link pb-1 px-1 whitespace-nowrap text-slate-600 hover:text-sky-600" data-target="panel-command-bank">Banco de Comandos</button>
                 </nav>
             </div>
         </div>
     </header>
 
-    <main class="flex-grow max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+    <main class="flex-grow max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
 
-        <!-- VISÃO GERAL -->
-        <section id="view-overview" class="view-section">
-            <div class="mb-8 bg-white p-8 rounded-lg shadow-sm border border-stone-100">
-                <h2 class="text-2xl font-bold mb-4 text-stone-800">Por que esta arquitetura é necessária?</h2>
-                <p class="text-stone-600 mb-8 leading-relaxed">
-                    Este documento detalha o procedimento de "resgate" e configuração de um ambiente de desenvolvimento isolado. Ele é necessário quando o host Windows apresenta corrupção severa no banco de dados de componentes (erro 1603, DISM travado) ou perda de referências de caminho do WSL, inviabilizando a instalação do Docker Desktop tradicional.
+        <section id="panel-architecture" class="view-section">
+            <div class="bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200 mb-8">
+                <h2 class="text-2xl font-bold text-slate-800 mb-2">Visão Geral da Arquitetura</h2>
+                <p class="text-slate-600 mb-6 leading-relaxed">
+                    Esta secção introduz a infraestrutura de desenvolvimento contornando os limites do Windows Host. Ao invés de usar o Docker Desktop sobre WSL2 (que falhava devido ao erro 1603 de registo e DISM corrompido), estabelecemos um motor Docker nativo num ambiente de Máquina Virtual Hyper-V Ubuntu pura, controlada via cliente SSH e integrada perfeitamente no VS Code.
                 </p>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-                    <div class="bg-red-50 p-5 rounded-lg border border-red-100">
-                        <h3 class="text-lg font-semibold text-red-800 mb-3 flex items-center gap-2"><span>⚠️</span> Sintoma 1: Falha do WSL</h3>
-                        <p class="text-sm text-red-700 mb-4">O Windows perde o link simbólico do executável do WSL, retornando "caminho não encontrado" mesmo após tentativas manuais de instalação via pacotes <code>.msixbundle</code>.</p>
-                        <!-- MOCK DO POWERSHELL -->
-                        <div class="mock-terminal">
-                            <div><span class="text-green-400">PS C:\WINDOWS\system32></span> wsl --install --manual</div>
-                            <div class="text-red-400">O sistema não pode encontrar o caminho especificado.</div>
-                            <div><span class="text-green-400">PS C:\Users\Usuario\Downloads></span> Add-AppxPackage -Path ".\Microsoft.WSL...msixbundle"</div>
-                            <div class="text-yellow-400">>></div>
-                            <div class="text-yellow-400">>> cd..</div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                    <div class="bg-slate-50 p-5 rounded-lg border border-slate-200">
+                        <div class="text-2xl mb-2">💻</div>
+                        <h3 class="font-bold text-slate-800 mb-1">Windows Host</h3>
+                        <p class="text-xs text-slate-500 leading-relaxed">Executa o VS Code, a extensão Remote-SSH e o navegador de internet. Totalmente imune às falhas de registo anteriores.</p>
+                    </div>
+                    <div class="bg-sky-50 p-5 rounded-lg border border-sky-100">
+                        <div class="text-2xl mb-2">⚡</div>
+                        <h3 class="font-bold text-sky-800 mb-1">Ponte SSH Nativa</h3>
+                        <p class="text-xs text-sky-600 leading-relaxed">Canal criptográfico que conecta o VS Code local diretamente à VM, permitindo desenvolvimento em tempo real.</p>
+                    </div>
+                    <div class="bg-slate-50 p-5 rounded-lg border border-slate-200">
+                        <div class="text-2xl mb-2">🐧</div>
+                        <h3 class="font-bold text-slate-800 mb-1">Hyper-V Ubuntu</h3>
+                        <p class="text-xs text-slate-500 leading-relaxed">Máquina Virtual dedicada ao motor Docker. RAM otimizada para 2GB dinâmicos para contornar a falha 0x8007000E.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center border-t border-slate-100 pt-8">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800 mb-3">Eficiência da Virtualização: VM vs Container</h3>
+                        <p class="text-slate-600 text-sm mb-4 leading-relaxed">
+                            A decisão de rodar os serviços (como n8n, bancos de dados, APIs) dentro de containers em cima da VM, e não criar várias VMs separadas, baseia-se na eficiência de recursos. O gráfico demonstra o consumo típico de arranque e de base.
+                        </p>
+                        <div class="space-y-3 text-sm">
+                            <div class="flex items-center gap-3">
+                                <span class="w-3 h-3 rounded-full bg-slate-400"></span>
+                                <span class="text-slate-600"><strong>Máquina Virtual Clássica:</strong> Virtualiza hardware. Requer Sistema Operativo completo por serviço.</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="w-3 h-3 rounded-full bg-sky-500"></span>
+                                <span class="text-slate-600"><strong>Docker Container:</strong> Virtualiza apenas o software. Compartilha o Kernel da VM de base, arranca instantaneamente.</span>
+                            </div>
                         </div>
                     </div>
-                    
-                    <div class="bg-stone-50 p-5 rounded-lg border border-stone-200">
-                        <h3 class="text-lg font-semibold text-stone-800 mb-3 flex items-center gap-2"><span>✅</span> A Solução: Isolamento via Hyper-V</h3>
-                        <p class="text-sm text-stone-600 mb-4">Em vez de depender da Microsoft Store ou do WSL (que interagem profundamente com o registro do Windows), isolamos o ambiente subindo o motor Docker nativamente em uma Máquina Virtual Linux gerida pelo Hyper-V, acessando-a via SSH.</p>
-                        <div class="block-diagram mt-6 text-sm">
-                            <div class="diagram-box p-2">🪟 Windows<br><span class="text-xs text-stone-500">VS Code</span></div>
-                            <div class="diagram-arrow">➔</div>
-                            <div class="diagram-box p-2 bg-sky-50 border-sky-200 border-2">🔑 SSH<br><span class="text-xs text-stone-500">Ponte de Rede</span></div>
-                            <div class="diagram-arrow">➔</div>
-                            <div class="diagram-box p-2">🐧 Ubuntu VM<br><span class="text-xs text-stone-500">Motor Docker</span></div>
+                    <div class="chart-container">
+                        <canvas id="overheadChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-xl font-bold text-slate-800 mb-4">Erros de Infraestrutura Superados</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="border border-red-100 bg-red-50/50 p-5 rounded-lg">
+                        <span class="text-red-600 font-bold text-sm block mb-1">ERRO DE ARRANQUE HYPER-V</span>
+                        <h4 class="font-semibold text-slate-800 text-base mb-2">Falha de Alocação (0x8007000E)</h4>
+                        <p class="text-sm text-slate-600 leading-relaxed">
+                            Ocorria ao tentar iniciar o Ubuntu com os 6GB padrão quando o Windows Host estava sobrecarregado. Resolvido ao limitar a RAM Inicial da VM para <strong>2048MB</strong> com Memória Dinâmica habilitada.
+                        </p>
+                    </div>
+                    <div class="border border-red-100 bg-red-50/50 p-5 rounded-lg">
+                        <span class="text-red-600 font-bold text-sm block mb-1">ERRO DE REGISTO DO WINDOWS</span>
+                        <h4 class="font-semibold text-slate-800 text-base mb-2">Falha Crítica WSL (Erro 1603)</h4>
+                        <p class="text-sm text-slate-600 leading-relaxed">
+                            Inviabilizava a instalação do WSL2 e do instalador oficial do Docker Desktop. Superado ao desacoplar completamente o motor do Docker do Windows, delegando-o para a VM.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="panel-interactive-builder" class="view-section hide">
+            <div class="bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200 mb-8">
+                <h2 class="text-2xl font-bold text-slate-800 mb-2">Gerador Dinâmico de Instâncias (Docker Run)</h2>
+                <p class="text-slate-600 mb-6 leading-relaxed">
+                    Esta ferramenta interativa permite estruturar o comando exato de execução para os seus containers de estudo e de produção. Ajuste os parâmetros abaixo e veja como a lógica de volumes, portas e variáveis de ambiente se alteram em tempo real.
+                </p>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <div class="lg:col-span-5 space-y-4">
+                        <div class="bg-slate-50 p-5 rounded-lg border border-slate-200">
+                            <h3 class="font-bold text-slate-800 mb-4">Parâmetros do Container</h3>
+                            
+                            <div class="mb-3">
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Nome do Container</label>
+                                <input type="text" id="cfg-name" value="n8n" class="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Nome de Utilizador Linux</label>
+                                <input type="text" id="cfg-user" value="masanori" class="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Pasta de Projetos (Volume)</label>
+                                <input type="text" id="cfg-folder" value="documentos/projetos/n8n" class="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Porta de Acesso Externa</label>
+                                <input type="number" id="cfg-port" value="5678" class="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                            </div>
+
+                            <div class="flex items-center gap-3">
+                                <input type="checkbox" id="cfg-cookie" class="w-4 h-4 text-sky-600 focus:ring-sky-500 border-slate-300 rounded" checked>
+                                <label for="cfg-cookie" class="text-sm font-semibold text-slate-700">Desativar Cookies Seguros (Necessário para acesso via IP HTTP)</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-7 flex flex-col justify-between">
+                        <div class="space-y-4">
+                            <h3 class="font-bold text-slate-800">Comando Gerado</h3>
+                            <div class="terminal-window p-4 rounded-lg">
+                                <div class="flex justify-between items-center text-xs text-slate-400 border-b border-slate-800 pb-2 mb-3">
+                                    <span>terminal - ubuntu_vm</span>
+                                    <button class="text-sky-400 hover:text-sky-300 font-semibold cursor-pointer" onclick="copyBuiltCommand()">COPIAR COMANDO</button>
+                                </div>
+                                <code id="built-command-output" class="text-sm block whitespace-pre-wrap break-all leading-relaxed">docker run...</code>
+                            </div>
+
+                            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r text-sm text-blue-900">
+                                <strong>Persistência Garantida:</strong> Ao usar o caminho completo absoluto de volumes (começando com <code>/home/...</code>), os seus fluxos do n8n ficarão salvos diretamente na sua pasta pessoal do Ubuntu. Pode atualizar, apagar ou reinstalar o container sem perder qualquer dado.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-xl font-bold text-slate-800 mb-2">Simulação Interativa de Erro: Cookie Seguro do n8n</h2>
+                <p class="text-slate-600 text-sm mb-6 leading-relaxed">
+                    Abaixo está uma réplica interativa do ecrã de bloqueio de segurança que ocorre quando o n8n é acedido pelo IP da Máquina Virtual sem a devida flag de ambiente. Ajuste o seletor para ver como o Docker contorna esta validação.
+                </p>
+
+                <div class="border border-slate-200 rounded-lg p-6 bg-slate-50 flex flex-col lg:flex-row gap-6 items-center">
+                    <div class="w-full lg:w-1/3 bg-white p-4 rounded border border-slate-200">
+                        <h4 class="font-bold text-slate-800 mb-3">Painel de Controlo</h4>
+                        <p class="text-xs text-slate-500 mb-4">Adicione ou remova a variável de ambiente para ver a reação do servidor de simulação.</p>
+                        <button id="toggle-cookie-simulation-btn" class="w-full py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded text-sm transition-colors">Remover Bloqueio de Cookies</button>
+                    </div>
+
+                    <div class="w-full lg:w-2/3 bg-white border border-slate-200 rounded p-6 shadow-sm">
+                        <div id="n8n-error-mock" class="text-center py-6">
+                            <div class="n8n-ban-symbol mb-4"></div>
+                            <h3 class="text-xl font-bold text-slate-800 mb-2">Your n8n server is configured to use a secure cookie,</h3>
+                            <h3 class="text-xl font-bold text-slate-800 mb-6">however you are either visiting this via an insecure URL, or using Safari.</h3>
+                            <div class="max-w-md mx-auto text-left text-sm text-slate-600 space-y-2">
+                                <p class="font-semibold text-slate-700">To fix this, please consider the following options:</p>
+                                <ul class="list-disc pl-5 space-y-1">
+                                    <li>Setup TLS/HTTPS (<strong>recommended</strong>), or</li>
+                                    <li>If you are running this locally, and not using Safari, try using <span class="underline text-blue-600 cursor-pointer">localhost</span> instead</li>
+                                    <li>If you prefer to disable this security feature (<strong>not recommended</strong>), set the environment variable <strong>N8N_SECURE_COOKIE</strong> to <strong>false</strong></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div id="n8n-success-mock" class="text-center py-10 hide">
+                            <div class="text-6xl mb-4">🎉</div>
+                            <h3 class="text-2xl font-bold text-emerald-600 mb-2">Acesso Concedido ao n8n!</h3>
+                            <p class="text-slate-600 max-w-md mx-auto text-sm leading-relaxed">
+                                O servidor leu a variável <code>N8N_SECURE_COOKIE=false</code> enviada no arranque do container e desabilitou a obrigação de criptografia de cookie para testes locais. Pode criar a sua conta de administrador.
+                            </p>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- GUIA DE INSTALAÇÃO -->
-        <section id="view-setup" class="view-section hide">
-            <div class="mb-8">
-                <h2 class="text-2xl font-bold mb-3 text-stone-800">Implementação da Infraestrutura</h2>
-                <p class="text-stone-600 mb-6">Siga as abas sequencialmente para recriar o ambiente. Cada passo foi detalhado para ser imune a falhas locais do Windows.</p>
-                
-                <div class="flex flex-col md:flex-row gap-6 bg-white rounded-lg shadow-sm border border-stone-200 overflow-hidden min-h-[500px]">
-                    <div class="md:w-1/3 bg-stone-50 flex flex-col p-3 border-r border-stone-200" id="tabs-container">
-                        <!-- Tabs renderizadas via JS -->
+        <section id="panel-images-explained" class="view-section hide">
+            <div class="bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200 mb-8">
+                <h2 class="text-2xl font-bold text-slate-800 mb-2">A Extensão Docker do VS Code Desmistificada</h2>
+                <p class="text-slate-600 mb-6 leading-relaxed">
+                    Quando executa o comando <code>docker tag</code> para enviar uma cópia do seu container local para a sua conta do Docker Hub, é comum observar itens aparentemente duplicados no painel de imagens. Explore o simulador interativo abaixo para entender o que ocorre no armazenamento físico.
+                </p>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                    <div class="lg:col-span-5 vs-code-panel rounded-lg shadow-lg overflow-hidden">
+                        <div class="bg-[#252526] px-4 py-2 text-xs text-slate-400 border-b border-[#2d2d2d] flex justify-between">
+                            <span>EXPLORADOR DOCKER (VS CODE)</span>
+                            <span>💻 remoto-ssh</span>
+                        </div>
+                        <div class="p-4 space-y-4 text-xs font-mono">
+                            <div>
+                                <span class="text-slate-500">▼</span> <span class="font-bold text-slate-300">IMAGES</span>
+                                <div class="pl-4 mt-2 space-y-2">
+                                    <div class="hover:bg-slate-800 p-1 rounded cursor-pointer vscode-item-image" data-image-info="custom-image">
+                                        <span class="text-sky-400">▼</span> 📁 docker.io/masanoriha/n8n
+                                        <div class="pl-4 text-slate-400">🏷️ 1.0 <span class="text-slate-600 text-[10px] ml-2">há 2 dias (versão customizada push)</span></div>
+                                    </div>
+                                    <div class="hover:bg-slate-800 p-1 rounded cursor-pointer vscode-item-image" data-image-info="official-image">
+                                        <span class="text-sky-400">▼</span> 📁 docker.n8n.io/n8nio/n8n
+                                        <div class="pl-4 text-slate-400">🏷️ latest <span class="text-slate-600 text-[10px] ml-2">há 2 dias (oficial downloaded)</span></div>
+                                    </div>
+                                    <div class="hover:bg-slate-800 p-1 rounded cursor-pointer vscode-item-image" data-image-info="hello-world">
+                                        <span class="text-slate-500">▶</span> 📁 hello-world
+                                    </div>
+                                    <div class="hover:bg-slate-800 p-1 rounded cursor-pointer vscode-item-image" data-image-info="nginx">
+                                        <span class="text-slate-500">▶</span> 📁 nginx
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="md:w-2/3 p-6 overflow-y-auto" id="tab-content">
-                        <!-- Conteúdo renderizado via JS -->
+
+                    <div class="lg:col-span-7 bg-slate-50 p-6 rounded-lg border border-slate-200">
+                        <h3 class="font-bold text-slate-800 mb-3" id="explanation-title">Selecione uma Imagem</h3>
+                        <p class="text-sm text-slate-600 leading-relaxed mb-4" id="explanation-body">
+                            Clique em qualquer uma das imagens do painel do VS Code à esquerda para ver a explicação técnica detalhada sobre o seu ciclo de vida, herança de camadas e consumo de espaço em disco.
+                        </p>
+                        <div id="explanation-stats" class="bg-white p-4 rounded border border-slate-200 hide text-xs space-y-1">
+                            <!-- Injetado via JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-xl font-bold text-slate-800 mb-4">O Fluxo de Trabalho e a Imutabilidade</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+                    <div class="bg-slate-50 p-5 rounded border border-slate-200">
+                        <h4 class="font-bold text-slate-800 mb-2">1. Imagens são Imutáveis</h4>
+                        <p class="text-slate-600 leading-relaxed">
+                            Uma imagem depois de gerada não pode ser editada. Se fizer modificações na sua API em .NET ou nos fluxos, terá de gerar uma nova tag de versão (ex: <code>1.1</code>) e subir novamente.
+                        </p>
+                    </div>
+                    <div class="bg-slate-50 p-5 rounded border border-slate-200">
+                        <h4 class="font-bold text-slate-800 mb-2">2. Tag e Referência</h4>
+                        <p class="text-slate-600 leading-relaxed">
+                            O comando <code>docker tag</code> funciona como um link simbólico de atalho. Ele não duplica o espaço do ficheiro no disco, apenas cria um novo apontamento com o seu identificador da nuvem.
+                        </p>
+                    </div>
+                    <div class="bg-slate-50 p-5 rounded border border-slate-200">
+                        <h4 class="font-bold text-slate-800 mb-2">3. O Ciclo de Rollback</h4>
+                        <p class="text-slate-600 leading-relaxed">
+                            Se atualizar o seu container para a versão nova e o sistema falhar, o rollback é instantâneo: basta parar a versão nova e iniciar novamente a imagem anterior estável, sem necessitar de reparação rápida em código de produção.
+                        </p>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- COMANDOS -->
-        <section id="view-commands" class="view-section hide">
-            <div class="mb-8">
-                <h2 class="text-2xl font-bold mb-3 text-stone-800">Painel de Comandos Diários</h2>
-                <p class="text-stone-600 mb-6">Sua biblioteca rápida. Como o Docker está rodando no Linux, estes comandos devem ser executados no terminal remoto (via VS Code) ou diretamente no terminal da VM.</p>
-                
-                <div class="relative mb-8 shadow-sm">
-                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-stone-400">🔍</span>
-                    <input type="text" id="searchInput" placeholder="Buscar comando (ex: logs, rm, build)..." class="w-full pl-12 pr-4 py-4 rounded-lg border border-stone-300 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-lg">
+        <section id="panel-command-bank" class="view-section hide">
+            <div class="bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200 mb-8">
+                <h2 class="text-2xl font-bold text-slate-800 mb-2">Biblioteca Prática de Comandos</h2>
+                <p class="text-slate-600 mb-6 leading-relaxed">
+                    Pesquise e consulte rapidamente os comandos do terminal que dão suporte à sua operação diária de infraestrutura. Clique no comando pretendido para o copiar para a área de transferência.
+                </p>
+
+                <div class="flex flex-col md:flex-row gap-4 mb-6">
+                    <input type="text" id="command-search-input" placeholder="Pesquisar comandos por ação ou utilidade..." class="flex-grow px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                    <select id="command-category-select" class="px-4 py-3 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                        <option value="all">Todas as Categorias</option>
+                        <option value="lifecycle">Ciclo de Vida (Container)</option>
+                        <option value="images">Imagens</option>
+                        <option value="volumes">Volumes & Persistência</option>
+                        <option value="debug">Diagnóstico & Monitorização</option>
+                    </select>
                 </div>
 
-                <div id="commands-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    <!-- Grid renderizada via JS -->
+                <div id="commands-list-output" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Injetado via JS -->
                 </div>
             </div>
         </section>
 
     </main>
 
+    <footer class="bg-white border-t border-slate-200 py-6">
+        <div class="max-w-6xl mx-auto px-4 text-center text-xs text-slate-500">
+            <p>Guia Técnico Consolidado para Operações de Infraestrutura Docker e Hyper-V</p>
+            <p class="mt-1">Ambiente Seguro de Aprendizado e Engenharia</p>
+        </div>
+    </footer>
+
+    <!-- Custom Modal/Toast Box -->
+    <div id="toast-message" class="fixed bottom-5 right-5 bg-slate-900 text-sky-400 border border-slate-800 px-4 py-3 rounded-lg shadow-xl text-xs font-mono tracking-tight transition-opacity duration-300 opacity-0 pointer-events-none z-50">
+        Comando copiado com sucesso!
+    </div>
+
     <script>
-        const appData = {
-            currentView: 'view-setup', // Inicia no setup por padrão para facilitar a vida do usuário
-            currentTab: 'infra',
-            steps: [
+        const appState = {
+            activeView: 'panel-architecture',
+            commandBuilder: {
+                name: 'n8n',
+                user: 'masanori',
+                folder: 'documentos/projetos/n8n',
+                port: '5678',
+                secureCookieDisabled: true
+            },
+            n8nSimulationError: true,
+            commands: [
                 {
-                    id: 'infra',
-                    title: '1. Hyper-V & Memória',
-                    icon: '💻',
-                    content: `
-                        <h3 class="text-xl font-bold mb-4 text-stone-800">Criação da VM e Contorno de Erro</h3>
-                        <p class="mb-4 text-stone-600 leading-relaxed">Abra o <strong>Gerenciador do Hyper-V</strong> e utilize a opção "Criação Rápida" para baixar e instalar o <strong>Ubuntu 22.04 LTS</strong> (ou superior).</p>
-                        
-                        <div class="bg-amber-50 p-4 rounded-lg border border-amber-200 mb-6">
-                            <h4 class="font-semibold text-amber-800 mb-2 flex items-center gap-2"><span>⚠️</span> Prevenção do Erro 0x8007000E</h4>
-                            <p class="text-sm text-amber-700 mb-4">Se o seu Windows estiver com gerenciamento de memória instável, tentar ligar a VM com as configurações padrão (6GB) causará uma falha de alocação, exibindo um erro semelhante a este:</p>
-                            
-                            <!-- MOCK DO ERRO HYPER-V -->
-                            <div class="mock-hyperv-error p-1 mb-4 text-xs">
-                                <div class="bg-white p-3">
-                                    <div class="flex items-start gap-3">
-                                        <div class="text-white bg-red-600 rounded-full w-6 h-6 flex items-center justify-center font-bold text-sm shrink-0">X</div>
-                                        <div>
-                                            <p class="text-sky-700 font-medium mb-3 text-sm">O Aplicativo encontrou um erro durante a tentativa de alterar o estado de 'Ubuntu 22.04 LTS'.</p>
-                                            <p class="text-stone-800 mb-2">'Ubuntu 22.04 LTS' failed to start.</p>
-                                            <p class="text-stone-800 mb-2">Not enough memory in the system to start the virtual machine Ubuntu 22.04 LTS with ram size 6000 megabytes.</p>
-                                            <p class="text-stone-800">Could not initialize memory: Recursos de memória insuficientes disponíveis para concluir a operação. (0x8007000E).</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="bg-stone-100 p-2 flex justify-end border-t border-stone-200">
-                                    <span class="px-4 py-1 bg-white border border-stone-300 rounded text-stone-800">Fechar</span>
-                                </div>
-                            </div>
-
-                            <p class="text-sm font-bold text-amber-900">A Solução:</p>
-                            <ol class="list-decimal pl-5 space-y-1 text-sm text-amber-800 mt-2">
-                                <li>Clique com botão direito na VM > <strong>Configurações</strong> > <strong>Memória</strong>.</li>
-                                <li>Altere a "Memória RAM Inicial" para <strong>2048 MB</strong>.</li>
-                                <li>Marque <strong>"Habilitar Memória Dinâmica"</strong> (Mínima: 512 MB, Máxima: 4096 MB).</li>
-                            </ol>
-                        </div>
-                    `
+                    cmd: 'docker run -d --name n8n -p 5678:5678 -e N8N_SECURE_COOKIE=false -v /home/masanori/documentos/projetos/n8n:/home/node/.n8n docker.n8n.io/n8nio/n8n',
+                    desc: 'Cria e inicia o container do n8n persistindo os dados na pasta do Linux de forma segura',
+                    cat: 'lifecycle'
                 },
                 {
-                    id: 'docker',
-                    title: '2. Instalação Docker',
-                    icon: '🐳',
-                    content: `
-                        <h3 class="text-xl font-bold mb-4 text-stone-800">Instalação Nativa no Ubuntu</h3>
-                        <p class="mb-4 text-stone-600">Ligue a Máquina Virtual, conclua a configuração do usuário e abra o terminal (<code>Ctrl + Alt + T</code>). Execute os passos abaixo para instalar o motor Docker diretamente no Linux.</p>
-                        
-                        <div class="mb-6">
-                            <p class="text-sm font-bold text-stone-700 mb-2">1. Atualizar pacotes e instalar o Docker:</p>
-                            <div class="bg-stone-900 p-1 rounded-lg">
-                                <div class="flex justify-between items-center px-3 py-1 bg-stone-800 rounded-t border-b border-stone-700">
-                                    <span class="text-xs text-stone-400">bash</span>
-                                    <button class="text-xs text-stone-300 hover:text-white" onclick="copyText('sudo apt update && sudo apt install docker.io -y', this)">Copiar</button>
-                                </div>
-                                <div class="p-3">
-                                    <code class="text-sm font-mono text-green-400">sudo apt update && sudo apt install docker.io -y</code>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-6">
-                            <p class="text-sm font-bold text-stone-700 mb-2">2. Configurar permissões de usuário:</p>
-                            <p class="text-xs text-stone-500 mb-2">Isso evita a necessidade de digitar 'sudo' antes de cada comando do docker.</p>
-                            <div class="bg-stone-900 p-1 rounded-lg">
-                                <div class="flex justify-between items-center px-3 py-1 bg-stone-800 rounded-t border-b border-stone-700">
-                                    <span class="text-xs text-stone-400">bash</span>
-                                    <button class="text-xs text-stone-300 hover:text-white" onclick="copyText('sudo usermod -aG docker $USER', this)">Copiar</button>
-                                </div>
-                                <div class="p-3">
-                                    <code class="text-sm font-mono text-green-400">sudo usermod -aG docker $USER</code>
-                                </div>
-                            </div>
-                            <div class="mt-2 text-sm text-sky-700 font-medium flex items-center gap-2">
-                                <span>🔄</span> Reinicie a VM após este passo para aplicar o grupo de permissão.
-                            </div>
-                        </div>
-                    `
+                    cmd: 'docker ps',
+                    desc: 'Lista todos os containers ativos no momento na Máquina Virtual',
+                    cat: 'lifecycle'
                 },
                 {
-                    id: 'ssh',
-                    title: '3. Acesso SSH & Rede',
-                    icon: '📡',
-                    content: `
-                        <h3 class="text-xl font-bold mb-4 text-stone-800">Preparando a Conexão Remota</h3>
-                        <p class="mb-4 text-stone-600">Para trabalhar de forma transparente a partir do Windows, precisamos ativar o servidor SSH na VM e descobrir qual IP ela recebeu do Hyper-V.</p>
-                        
-                        <div class="mb-6">
-                            <p class="text-sm font-bold text-stone-700 mb-2">1. Instalar o OpenSSH Server:</p>
-                            <div class="bg-stone-900 text-stone-100 p-3 rounded-lg mb-2 cursor-pointer hover:bg-stone-800 transition" onclick="copyText('sudo apt install openssh-server -y')">
-                                <code class="text-sm font-mono">sudo apt install openssh-server -y</code>
-                            </div>
-                            <div class="bg-stone-900 text-stone-100 p-3 rounded-lg cursor-pointer hover:bg-stone-800 transition" onclick="copyText('sudo systemctl enable ssh --now')">
-                                <code class="text-sm font-mono text-stone-400"># Garante que inicie com o sistema</code><br>
-                                <code class="text-sm font-mono">sudo systemctl enable ssh --now</code>
-                            </div>
-                        </div>
-
-                        <div>
-                            <p class="text-sm font-bold text-stone-700 mb-2">2. Descobrir o IP da Máquina Virtual:</p>
-                            <p class="text-xs text-stone-500 mb-2">Execute o comando <code>ip addr</code> e procure pela interface de rede principal (geralmente <strong>eth0</strong>).</p>
-                            
-                            <!-- MOCK DO TERMINAL UBUNTU (ip addr) -->
-                            <div class="mock-ubuntu mb-2">
-                                <div><span class="text-green-400">usuario_linux@nomedavm:~$</span> ip addr</div>
-                                <div class="text-stone-400">1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu 65536...</div>
-                                <div class="text-white mt-1">2: <span class="font-bold">eth0</span>: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500...</div>
-                                <div class="text-stone-300 ml-4">link/ether 00:15:5d:xx:xx:xx brd ff:ff:ff:ff:ff:ff</div>
-                                <div class="text-white ml-4 font-bold bg-white/10 inline-block px-1">inet 192.168.x.x/20 brd 192.168.x.255 scope global...</div>
-                                <div class="text-stone-300 ml-4">valid_lft 86294sec preferred_lft 86294sec</div>
-                                <div class="text-stone-400 mt-1">3: docker0: &lt;NO-CARRIER,BROADCAST,MULTICAST,UP&gt;...</div>
-                                <div><span class="text-green-400 mt-2 block">usuario_linux@nomedavm:~$</span> <span class="animate-pulse">_</span></div>
-                            </div>
-                            
-                            <p class="text-sm text-stone-600 bg-stone-100 p-3 rounded border border-stone-200">
-                                Anote o endereço após <strong>inet</strong> (Exemplo: <code>192.168.1.50</code>). Você usará este IP no Windows para conectar o VS Code e acessar suas APIs no navegador (ex: <code>http://192.168.1.50:5000</code>).
-                            </p>
-                        </div>
-                    `
+                    cmd: 'docker ps -a',
+                    desc: 'Lista absolutamente todos os containers (ativos e parados) existentes no motor',
+                    cat: 'lifecycle'
                 },
                 {
-                    id: 'vscode',
-                    title: '4. Configurar VS Code',
-                    icon: '⚙️',
-                    content: `
-                        <h3 class="text-xl font-bold mb-4 text-stone-800">Unindo os Mundos (Windows + Linux)</h3>
-                        <p class="mb-4 text-stone-600">Agora voltamos ao Windows. Todo o seu código será escrito aqui, mas executado magicamente dentro do Linux.</p>
-                        
-                        <ol class="list-decimal pl-5 space-y-4 text-stone-700 mb-6">
-                            <li>Abra o <strong>Visual Studio Code</strong> no Windows.</li>
-                            <li>Instale a extensão oficial da Microsoft chamada <strong>"Remote - SSH"</strong>.</li>
-                            <li>Aperte <kbd class="px-2 py-1 bg-stone-100 border border-stone-300 rounded text-xs font-mono">F1</kbd> ou <kbd class="px-2 py-1 bg-stone-100 border border-stone-300 rounded text-xs font-mono">Ctrl+Shift+P</kbd> e digite: <code>Remote-SSH: Connect to Host...</code></li>
-                            <li>Selecione <strong>"Add New SSH Host"</strong> e digite o comando no formato: <code>ssh &lt;seu_usuario_linux&gt;@&lt;ip_da_vm&gt;</code></li>
-                        </ol>
-
-                        <p class="text-sm font-bold text-stone-700 mb-2">Salvando a Configuração (Opcional, mas recomendado):</p>
-                        <p class="text-xs text-stone-500 mb-2">O VS Code perguntará onde salvar este atalho. Escolha o arquivo de configuração do seu usuário Windows.</p>
-                        
-                        <!-- MOCK DO VS CODE -->
-                        <div class="mock-vscode text-sm mb-6">
-                            <div class="bg-[#252526] text-[#cccccc] p-3 border-b border-[#333]">
-                                Select SSH configuration file to update
-                            </div>
-                            <div class="bg-[#37373d] text-white p-2 px-4 cursor-pointer">
-                                C:\Users\&lt;SeuUsuarioWindows&gt;\.ssh\config
-                            </div>
-                            <div class="bg-[#1e1e1e] text-[#cccccc] p-2 px-4">
-                                C:\ProgramData\ssh\ssh_config
-                            </div>
-                        </div>
-
-                        <div class="bg-sky-50 border-l-4 border-sky-500 p-4 rounded-r">
-                            <h4 class="font-bold text-sky-800">Pronto para codar!</h4>
-                            <p class="text-sm text-sky-700 mt-1">Ao conectar, o VS Code pedirá a senha do Linux. O terminal integrado do VS Code agora será o bash do Ubuntu. Você pode abrir pastas da VM e rodar arquivos <code>docker-compose.yml</code> normalmente.</p>
-                        </div>
-                    `
+                    cmd: 'docker stop n8n',
+                    desc: 'Envia um sinal de paragem graciosa para a instância ativa do n8n',
+                    cat: 'lifecycle'
+                },
+                {
+                    cmd: 'docker start n8n',
+                    desc: 'Acorda uma instância anteriormente parada mantendo todos os seus ficheiros temporários',
+                    cat: 'lifecycle'
+                },
+                {
+                    cmd: 'docker rm -f n8n',
+                    desc: 'Força a paragem e eliminação física do container libertando o nome',
+                    cat: 'lifecycle'
+                },
+                {
+                    cmd: 'docker images',
+                    desc: 'Exibe todas as imagens e marcas (tags) guardadas fisicamente na VM',
+                    cat: 'images'
+                },
+                {
+                    cmd: 'docker tag docker.n8n.io/n8nio/n8n masanoriha/n8n:1.0',
+                    desc: 'Cria um novo atalho referenciador da imagem do n8n associado ao seu perfil do Docker Hub',
+                    cat: 'images'
+                },
+                {
+                    cmd: 'docker push masanoriha/n8n:1.0',
+                    desc: 'Envia a imagem local etiquetada para o armazém seguro na nuvem do Docker Hub',
+                    cat: 'images'
+                },
+                {
+                    cmd: 'docker rmi masanoriha/n8n:1.0',
+                    desc: 'Elimina do disco local a imagem de atalho do Docker Hub',
+                    cat: 'images'
+                },
+                {
+                    cmd: 'docker volume ls',
+                    desc: 'Lista todos os volumes nomeados independentes geridos pelo motor interno do Docker',
+                    cat: 'volumes'
+                },
+                {
+                    cmd: 'docker volume inspect n8n_data',
+                    desc: 'Apresenta detalhes técnicos da localização física do volume de persistência dentro do Linux',
+                    cat: 'volumes'
+                },
+                {
+                    cmd: 'docker stats',
+                    desc: 'Apresenta o consumo exato de CPU, RAM e Redes de cada container ativo na VM',
+                    cat: 'debug'
+                },
+                {
+                    cmd: 'docker logs -f n8n',
+                    desc: 'Acompanha em tempo real as linhas de log geradas pela aplicação dentro do container',
+                    cat: 'debug'
+                },
+                {
+                    cmd: 'docker exec -it n8n bash',
+                    desc: 'Abre o terminal interativo de comandos diretamente de dentro da pasta do container ativo',
+                    cat: 'debug'
+                },
+                {
+                    cmd: 'docker system prune -a --volumes',
+                    desc: 'Limpeza profunda: remove containers parados, volumes sem uso e imagens sem referência',
+                    cat: 'debug'
                 }
             ],
-            commands: [
-                { cmd: 'docker run hello-world', desc: 'Testar se a instalação do motor foi bem-sucedida' },
-                { cmd: 'docker run -d -p 8080:80 --name meu-servidor nginx', desc: 'Rodar container em background (Ex: Servidor Web Nginx)' },
-                { cmd: 'docker ps', desc: 'Listar todos os containers ativos no momento' },
-                { cmd: 'docker ps -a', desc: 'Listar TODOS os containers (incluindo os parados)' },
-                { cmd: 'docker stop <nome_ou_id>', desc: 'Desligar um container que está rodando' },
-                { cmd: 'docker rm <nome_ou_id>', desc: 'Deletar a "carcaça" de um container parado' },
-                { cmd: 'docker rm -f <nome_ou_id>', desc: 'Forçar o desligamento e a deleção de uma só vez' },
-                { cmd: 'docker logs <nome_ou_id>', desc: 'Ver o output (console) de um container rodando' },
-                { cmd: 'docker images', desc: 'Listar as imagens base baixadas no seu disco' },
-                { cmd: 'docker rmi <nome_da_imagem>', desc: 'Apagar uma imagem base para liberar espaço' },
-                { cmd: 'docker-compose up -d', desc: 'Subir ambiente completo via arquivo compose' },
-                { cmd: 'docker-compose down', desc: 'Derrubar ambiente completo do compose' }
-            ]
+            imageExplanations: {
+                'custom-image': {
+                    title: 'docker.io/masanoriha/n8n:1.0',
+                    desc: 'Esta é a imagem criada por si através do comando de etiquetas para corresponder à sua conta do Docker Hub. Ela serve como a sua cópia de segurança na nuvem. Se amanhã precisar de formatar a VM, basta dar o pull neste caminho e o motor Docker irá descarregar exatamente esta mesma versão do sistema.',
+                    size: 'Tamanho Virtual: ~1.2 GB (Referencia as camadas da oficial)'
+                },
+                'official-image': {
+                    title: 'docker.n8n.io/n8nio/n8n:latest',
+                    desc: 'Esta é a imagem oficial e limpa do n8n descarregada diretamente dos servidores oficiais do fabricante. O container original foi gerado baseado neste molde básico.',
+                    size: 'Tamanho Físico Real: ~1.2 GB'
+                },
+                'hello-world': {
+                    title: 'hello-world:latest',
+                    desc: 'A imagem de teste de base recomendada para verificar se o motor Docker nativo do Ubuntu está ativo e consegue criar processos sem permissões root dedicadas.',
+                    size: 'Tamanho: ~13 KB (Super leve)'
+                },
+                'nginx': {
+                    title: 'nginx:latest',
+                    desc: 'A imagem do servidor web estável utilizada nos nossos primeiros testes práticos de ciclo de vida de portas expostas e de paragem/remoção rápida de aplicações.',
+                    size: 'Tamanho: ~180 MB'
+                }
+            }
         };
 
-        function initNav() {
-            const navBtns = document.querySelectorAll('.nav-btn');
+        function initNavigation() {
+            const navLinks = document.querySelectorAll('.nav-link');
             const sections = document.querySelectorAll('.view-section');
 
-            navBtns.forEach(btn => {
-                btn.addEventListener('click', (e) => {
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
                     const targetId = e.target.getAttribute('data-target');
-                    appData.currentView = targetId;
-                    
-                    navBtns.forEach(b => b.classList.remove('active'));
+                    appState.activeView = targetId;
+
+                    navLinks.forEach(l => l.classList.remove('active'));
                     e.target.classList.add('active');
 
                     sections.forEach(sec => {
-                        if(sec.id === targetId) {
+                        if (sec.id === targetId) {
                             sec.classList.remove('hide');
                         } else {
                             sec.classList.add('hide');
@@ -329,105 +511,234 @@
             });
         }
 
-        function renderTabs() {
-            const container = document.getElementById('tabs-container');
-            container.innerHTML = '';
-            
-            appData.steps.forEach(step => {
-                const btn = document.createElement('button');
-                btn.className = `tab-btn w-full text-left p-4 rounded-lg mb-2 flex items-center gap-3 hover:bg-stone-200 transition-colors ${appData.currentTab === step.id ? 'active' : 'text-stone-600 border-l-4 border-transparent'}`;
-                btn.innerHTML = `<span class="text-2xl">${step.icon}</span> <span class="font-medium">${step.title}</span>`;
-                btn.onclick = () => {
-                    appData.currentTab = step.id;
-                    renderTabs();
-                    renderTabContent();
-                };
-                container.appendChild(btn);
-            });
+        function triggerToast(message) {
+            const toast = document.getElementById('toast-message');
+            toast.innerText = message;
+            toast.classList.remove('pointer-events-none');
+            toast.style.opacity = '1';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.classList.add('pointer-events-none');
+            }, 2500);
         }
 
-        function renderTabContent() {
-            const contentDiv = document.getElementById('tab-content');
-            const stepData = appData.steps.find(s => s.id === appData.currentTab);
-            if(stepData) {
-                // Fade effect
-                contentDiv.style.opacity = '0';
-                setTimeout(() => {
-                    contentDiv.innerHTML = stepData.content;
-                    contentDiv.style.transition = 'opacity 0.3s ease';
-                    contentDiv.style.opacity = '1';
-                }, 100);
+        function copyToClipboard(text) {
+            const dummy = document.createElement('textarea');
+            document.body.appendChild(dummy);
+            dummy.value = text;
+            dummy.select();
+            document.execCommand('copy');
+            document.body.removeChild(dummy);
+            triggerToast('Copiado para a área de transferência!');
+        }
+
+        function updateBuiltCommand() {
+            const name = document.getElementById('cfg-name').value.trim();
+            const user = document.getElementById('cfg-user').value.trim();
+            const folder = document.getElementById('cfg-folder').value.trim();
+            const port = document.getElementById('cfg-port').value.trim();
+            const secureCookie = document.getElementById('cfg-cookie').checked;
+
+            let cmd = `docker run -d \\\n  --name ${name} \\\n  -p ${port}:${port} \\\n`;
+            if (secureCookie) {
+                cmd += `  -e N8N_SECURE_COOKIE=false \\\n`;
+            }
+            cmd += `  -v /home/${user}/${folder}:/home/node/.n8n \\\n  docker.n8n.io/n8nio/n8n`;
+
+            document.getElementById('built-command-output').innerText = cmd;
+
+            appState.commandBuilder = { name, user, folder, port, secureCookieDisabled: secureCookie };
+            
+            updateSimulationEfficacy(secureCookie);
+        }
+
+        function copyBuiltCommand() {
+            const text = document.getElementById('built-command-output').innerText;
+            copyToClipboard(text);
+        }
+
+        function updateSimulationEfficacy(cookieDisabled) {
+            const errorMock = document.getElementById('n8n-error-mock');
+            const successMock = document.getElementById('n8n-success-mock');
+            const simBtn = document.getElementById('toggle-cookie-simulation-btn');
+
+            if (cookieDisabled) {
+                errorMock.classList.add('hide');
+                successMock.classList.remove('hide');
+                simBtn.innerText = 'Ativar Bloqueio de Cookies';
+                simBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+                simBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                appState.n8nSimulationError = false;
+            } else {
+                errorMock.classList.remove('hide');
+                successMock.classList.add('hide');
+                simBtn.innerText = 'Desativar Bloqueio de Cookies';
+                simBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                simBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+                appState.n8nSimulationError = true;
             }
         }
 
-        function renderCommands(filterText = '') {
-            const grid = document.getElementById('commands-grid');
-            grid.innerHTML = '';
-            
-            const lowerFilter = filterText.toLowerCase();
-            const filtered = appData.commands.filter(c => 
-                c.cmd.toLowerCase().includes(lowerFilter) || 
-                c.desc.toLowerCase().includes(lowerFilter)
-            );
+        function initSimulationHandler() {
+            const simBtn = document.getElementById('toggle-cookie-simulation-btn');
+            simBtn.addEventListener('click', () => {
+                const checkbox = document.getElementById('cfg-cookie');
+                checkbox.checked = !checkbox.checked;
+                updateBuiltCommand();
+            });
+        }
 
-            if(filtered.length === 0) {
-                grid.innerHTML = '<div class="col-span-full py-10 text-center text-stone-500"><span class="text-3xl block mb-2">🕵️</span> Nenhum comando encontrado para sua busca.</div>';
+        function initVSCodeSimulator() {
+            const items = document.querySelectorAll('.vscode-item-image');
+            const titleEl = document.getElementById('explanation-title');
+            const bodyEl = document.getElementById('explanation-body');
+            const statsEl = document.getElementById('explanation-stats');
+
+            items.forEach(item => {
+                item.addEventListener('click', () => {
+                    const infoKey = item.getAttribute('data-image-info');
+                    const info = appState.imageExplanations[infoKey];
+
+                    if (info) {
+                        titleEl.innerText = info.title;
+                        bodyEl.innerText = info.desc;
+                        statsEl.classList.remove('hide');
+                        statsEl.innerHTML = `<strong>DADOS DE ARMAZENAMENTO:</strong><br>${info.size}`;
+                    }
+                });
+            });
+        }
+
+        function renderCommandBank() {
+            const output = document.getElementById('commands-list-output');
+            const search = document.getElementById('command-search-input').value.toLowerCase();
+            const category = document.getElementById('command-category-select').value;
+
+            output.innerHTML = '';
+
+            const filtered = appState.commands.filter(item => {
+                const matchesSearch = item.cmd.toLowerCase().includes(search) || item.desc.toLowerCase().includes(search);
+                const matchesCategory = category === 'all' || item.cat === category;
+                return matchesSearch && matchesCategory;
+            });
+
+            if (filtered.length === 0) {
+                output.innerHTML = `
+                    <div class="col-span-full py-12 text-center text-slate-400">
+                        <span class="text-4xl block mb-2">🔍</span>
+                        Nenhum comando foi encontrado para a pesquisa especificada.
+                    </div>
+                `;
                 return;
             }
 
-            filtered.forEach(cmdData => {
+            filtered.forEach(item => {
                 const card = document.createElement('div');
-                card.className = 'bg-white border border-stone-200 rounded-xl p-5 shadow-sm flex flex-col justify-between hover:shadow-md hover:border-sky-200 transition-all group';
+                card.className = 'bg-slate-50 border border-slate-200 rounded-lg p-5 flex flex-col justify-between hover:shadow-md hover:border-sky-300 transition-all cursor-pointer';
+                card.onclick = () => copyToClipboard(item.cmd);
                 card.innerHTML = `
-                    <div class="mb-4">
-                        <p class="text-sm font-semibold text-stone-800 mb-3 leading-snug">${cmdData.desc}</p>
-                        <div class="bg-[#1e1e1e] rounded-lg p-3 overflow-x-auto border border-stone-800">
-                            <code class="text-sm font-mono text-green-400 whitespace-nowrap">${cmdData.cmd.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code>
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${getCategoryStyle(item.cat)}">
+                                ${getCategoryName(item.cat)}
+                            </span>
+                            <span class="text-slate-400 text-xs hover:text-sky-500">📋 COPIAR</span>
                         </div>
+                        <p class="text-slate-700 text-sm mb-4 leading-relaxed">${item.desc}</p>
                     </div>
-                    <button class="copy-btn w-full py-2.5 bg-stone-100 text-stone-700 group-hover:bg-sky-50 group-hover:text-sky-700 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 transition-colors border border-stone-200 group-hover:border-sky-200" onclick="copyText('${cmdData.cmd.replace(/'/g, "\\'")}', this)">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg> 
-                        Copiar Comando
-                    </button>
+                    <div class="bg-slate-950 p-3 rounded font-mono text-xs text-sky-400 overflow-x-auto border border-slate-800">
+                        ${item.cmd}
+                    </div>
                 `;
-                grid.appendChild(card);
+                output.appendChild(card);
             });
         }
 
-        function copyText(text, btnElement = null) {
-            navigator.clipboard.writeText(text).then(() => {
-                if(btnElement) {
-                    const originalHTML = btnElement.innerHTML;
-                    btnElement.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Copiado!';
-                    btnElement.classList.add('bg-green-100', 'text-green-800', 'border-green-200');
-                    btnElement.classList.remove('bg-stone-100', 'text-stone-700', 'group-hover:bg-sky-50', 'group-hover:text-sky-700');
-                    setTimeout(() => {
-                        btnElement.innerHTML = originalHTML;
-                        btnElement.classList.remove('bg-green-100', 'text-green-800', 'border-green-200');
-                        btnElement.classList.add('bg-stone-100', 'text-stone-700', 'group-hover:bg-sky-50', 'group-hover:text-sky-700');
-                    }, 2000);
+        function getCategoryStyle(cat) {
+            switch(cat) {
+                case 'lifecycle': return 'bg-sky-100 text-sky-800 border border-sky-200';
+                case 'images': return 'bg-purple-100 text-purple-800 border border-purple-200';
+                case 'volumes': return 'bg-amber-100 text-amber-800 border border-amber-200';
+                case 'debug': return 'bg-emerald-100 text-emerald-800 border border-emerald-200';
+                default: return 'bg-slate-100 text-slate-800 border border-slate-200';
+            }
+        }
+
+        function getCategoryName(cat) {
+            switch(cat) {
+                case 'lifecycle': return 'Ciclo de Vida';
+                case 'images': return 'Imagens';
+                case 'volumes': return 'Volumes';
+                case 'debug': return 'Debug / Diagnóstico';
+                default: return 'Geral';
+            }
+        }
+
+        function initCommandBankListeners() {
+            document.getElementById('command-search-input').addEventListener('input', renderCommandBank);
+            document.getElementById('command-category-select').addEventListener('change', renderCommandBank);
+        }
+
+        function initOverheadChart() {
+            const ctx = document.getElementById('overheadChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Consumo RAM Base (MB)', 'Tempo de Boot (Seg)', 'Espaço Base Disco (MB)'],
+                    datasets: [
+                        {
+                            label: 'Hyper-V Ubuntu VM',
+                            data: [1100, 35, 8000],
+                            backgroundColor: '#94a3b8',
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Docker Container (n8n)',
+                            data: [380, 2, 450],
+                            backgroundColor: '#0284c7',
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { boxWidth: 12, font: { family: 'Segoe UI' } }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#f1f5f9' },
+                            ticks: { font: { family: 'Segoe UI' } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { family: 'Segoe UI' } }
+                        }
+                    }
                 }
             });
         }
 
-        function initSearch() {
-            const searchInput = document.getElementById('searchInput');
-            searchInput.addEventListener('input', (e) => {
-                renderCommands(e.target.value);
-            });
-        }
-
-        // Removido o gráfico de barras, mantendo a arquitetura puramente visual/HTML baseada nas instruções
-        
         document.addEventListener('DOMContentLoaded', () => {
-            initNav();
-            renderTabs();
-            renderTabContent();
-            renderCommands();
-            initSearch();
-            
-            // Força a exibição da aba correta no load
-            document.querySelector('[data-target="view-setup"]').click();
+            initNavigation();
+            initSimulationHandler();
+            initVSCodeSimulator();
+            initCommandBankListeners();
+            renderCommandBank();
+
+            document.getElementById('cfg-name').addEventListener('input', updateBuiltCommand);
+            document.getElementById('cfg-user').addEventListener('input', updateBuiltCommand);
+            document.getElementById('cfg-folder').addEventListener('input', updateBuiltCommand);
+            document.getElementById('cfg-port').addEventListener('input', updateBuiltCommand);
+            document.getElementById('cfg-cookie').addEventListener('change', updateBuiltCommand);
+
+            updateBuiltCommand();
+            initOverheadChart();
         });
     </script>
 </body>
